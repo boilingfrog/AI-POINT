@@ -86,19 +86,21 @@ docs/         # 文档
 
 **作用**：团队共享的 MCP 服务配置，提交到 git
 
+**注意**：以下是配置结构示例，实际 URL 和认证方式需查阅各 MCP 服务的官方文档。
+
 ```json
 {
   "mcpServers": {
     "github": {
       "transport": "http",
-      "url": "https://api.githubcopilot.com/mcp/",
+      "url": "https://api.github.com/mcp/",
       "headers": {
         "Authorization": "Bearer ${GITHUB_TOKEN}"
       }
     },
     "context7": {
       "transport": "http",
-      "url": "https://mcp.context7.com/",
+      "url": "https://api.context7.com/mcp/",
       "headers": {
         "Authorization": "Bearer ${CONTEXT7_TOKEN}"
       }
@@ -106,6 +108,11 @@ docs/         # 文档
   }
 }
 ```
+
+**配置说明**：
+- 实际 MCP 服务 URL 请查阅官方文档或使用 `claude mcp add` 命令自动配置
+- 推荐使用 `claude mcp add` 命令添加 MCP 服务，而不是手动编辑此文件
+- 可以使用 `claude mcp list` 查看已配置的 MCP 服务
 
 **环境变量说明**：
 - `GITHUB_TOKEN`：GitHub Personal Access Token（从 https://github.com/settings/tokens 创建）
@@ -152,8 +159,12 @@ autoInvoke: false
 6. 认证/授权缺陷
 
 ## 输入
-- `$FILE` - 要审查的文件路径
-- `$ARGUMENTS` - 额外参数（可选）
+- `$FILE` - 要审查的文件路径（通过 `/security-review <file>` 传入）
+- `$ARGUMENTS` - 额外参数（可选），例如 `--recursive` 用于递归检查目录
+
+**注意**：Skill 的输入变量取决于调用方式：
+- 直接调用：`/security-review src/api/user.go`，则 `$FILE` = `src/api/user.go`
+- 带参数：`/security-review src/ --recursive`，则 `$FILE` = `src/`，`$ARGUMENTS` = `--recursive`
 
 ## 输出
 生成安全审查报告，包含：
@@ -186,7 +197,9 @@ Hooks 在特定事件触发时自动执行任务。
 
 ### 3.1 配置 Hooks
 
-**文件**：`.claude/hooks.json`
+**位置**：`.claude/hooks.json`（在项目的 `.claude` 目录下）
+
+**作用**：定义在特定事件（保存、提交、推送等）时自动执行的任务
 
 ```json
 {
@@ -277,12 +290,16 @@ description: 部署应用到指定环境
 
 ## 环境要求
 
-$ARGUMENTS 必须是 dev / staging / prod 之一
+`$ARGUMENTS` 必须是 `dev` / `staging` / `prod` 之一
 
 生产环境部署需要：
 - 主分支已合并
 - 所有测试通过
 - 用户明确确认
+
+**注意**：`$ARGUMENTS` 变量自动包含命令后的所有参数，例如：
+- `/deploy dev` → `$ARGUMENTS` = `dev`
+- `/deploy staging --force` → `$ARGUMENTS` = `staging --force`
 
 ## 执行命令
 
@@ -520,18 +537,35 @@ Claude 会自动创建记忆文件。
 
 ### Q4：如何测试 Claude 配置是否生效？
 
-```bash
-# 检查 CLAUDE.md 是否加载
+**检查 CLAUDE.md 是否加载**
+```
 启动 Claude 后，询问："这个项目的技术栈是什么？"
+如果 Claude 能准确回答 CLAUDE.md 中记录的技术栈，说明加载成功
+```
 
-# 检查 Skill 是否可用
+**检查 Skills 是否可用**
+```
 输入：/code-review
+如果命令被识别（而不是报错"未知命令"），说明 Skill 加载成功
+```
 
-# 检查 MCP 是否连接
+**检查 MCP 是否连接**
+```
 输入：/mcp list
+会列出所有已配置的 MCP 服务及其状态
+```
 
-# 检查 Hooks 是否生效
-修改一个文件并保存，看是否触发格式化
+**检查 Hooks 是否生效**
+```
+修改一个文件并保存，观察是否：
+- 自动格式化（如果配置了 beforeFileSave hook）
+- 提交前自动运行测试（如果配置了 beforeCommit hook）
+```
+
+**检查 Commands 是否可用**
+```
+输入：/help
+会列出所有可用的命令，包括自定义命令
 ```
 
 ---
