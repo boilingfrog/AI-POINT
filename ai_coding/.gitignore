@@ -1,0 +1,11 @@
+# Claude 本地配置和缓存
+.claude/settings.local.json
+.claude/.cache/
+.claude/memory/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/

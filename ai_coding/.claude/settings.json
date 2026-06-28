@@ -1,0 +1,9 @@
+{
+  "gitCommitStyle": "conventional",
+  "preferredLanguage": "zh-CN",
+  "codeStyle": {
+    "indentation": "spaces",
+    "indentSize": 2,
+    "lineLength": 100
+  }
+}
