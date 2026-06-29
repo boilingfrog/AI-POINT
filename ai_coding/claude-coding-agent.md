@@ -4,6 +4,41 @@
 
 ---
 
+## 关于本项目（AI 编程学习项目）
+
+本项目用于学习和整理 AI 辅助编程的最佳实践，包括 Claude Code、OpenSpec 等工具的使用方法和配置指南。
+
+### 项目结构
+
+```
+.
+├── README.md                    # 项目总览和扩展清单
+├── OpenSpec.md                  # OpenSpec 使用文档
+└── claude-coding-agent.md       # Claude 编码配置指南（本文件，含项目说明）
+```
+
+### 项目目标
+
+- 整理 Claude Code 的插件、MCP、技能等扩展体系
+- 记录 OpenSpec 规格驱动开发的工作流
+- 提供可复用的配置模板和最佳实践
+- 帮助团队快速上手 AI 辅助编程
+
+### 内容组织
+
+- **README.md**：介绍 Claude Code 的五大扩展机制（插件市场、MCP 服务、内置扩展、IDE 集成、内置技能与命令）
+- **OpenSpec.md**：规格驱动开发（SDD）的核心流程——为什么用、最大作用、完整工作流、Git 提交策略
+- **claude-coding-agent.md**：Claude 项目配置完整方案（本文件）——核心配置文件、Skills、Hooks、命令、Memory、语言特定配置、团队协作
+
+### 本项目规范
+
+- 文档使用中文，Markdown 格式
+- 代码示例用 ``` 代码块
+- 提交信息遵循 Conventional Commits
+- 本项目是文档项目，不含可执行代码；配置示例中的 Token 用环境变量占位符，所有模板按实际项目调整
+
+---
+
 ## 一、核心配置文件
 
 ### 1.1 CLAUDE.md - 项目说明文件
