@@ -141,15 +141,17 @@ Skills 是可复用的工作流，封装高频任务。
 ```markdown
 ---
 name: security-review
-description: 对代码进行安全审查，检查常见漏洞
-invocation: /security-review
-autoInvoke: false
+description: 对代码进行安全审查，检查常见漏洞。审查代码安全性时使用。
+disable-model-invocation: true
+allowed-tools: Read Grep Glob
+arguments: [target]
+argument-hint: [file-or-dir]
 ---
 
 # Security Review Skill
 
 ## 任务
-审查指定文件或目录的代码，检查以下安全问题：
+审查 `$target` 指定的文件或目录，检查以下安全问题：
 
 1. SQL 注入风险
 2. XSS 漏洞
@@ -158,14 +160,6 @@ autoInvoke: false
 5. 路径遍历
 6. 认证/授权缺陷
 
-## 输入
-- `$FILE` - 要审查的文件路径（通过 `/security-review <file>` 传入）
-- `$ARGUMENTS` - 额外参数（可选），例如 `--recursive` 用于递归检查目录
-
-**注意**：Skill 的输入变量取决于调用方式：
-- 直接调用：`/security-review src/api/user.go`，则 `$FILE` = `src/api/user.go`
-- 带参数：`/security-review src/ --recursive`，则 `$FILE` = `src/`，`$ARGUMENTS` = `--recursive`
-
 ## 输出
 生成安全审查报告，包含：
 - 发现的问题清单（按严重程度排序）
@@ -173,11 +167,36 @@ autoInvoke: false
 - 安全评分（1-10）
 
 ## 示例
+\`/security-review src/api/user.go\` → `$target` = `src/api/user.go`
+\`/security-review src/\` → `$target` = `src/`
 ```
-/security-review src/api/user.go
-/security-review src/ --recursive
-```
-```
+
+**frontmatter 字段说明**（对齐 [官方 Agent Skills 规范](https://code.claude.com/docs/en/skills)）：
+
+| 字段 | 必填 | 说明 |
+|------|------|------|
+| `name` | 否 | 显示名，默认用目录名 |
+| `description` | 是 | 描述用途，Claude 据此决定何时自动加载 |
+| `disable-model-invocation` | 否 | `true` 表示禁止 Claude 自动触发，只能手动 `/name` 调用。默认 false |
+| `user-invocable` | 否 | `false` 时从 `/` 菜单隐藏（仅作背景知识）。默认 true |
+| `allowed-tools` | 否 | skill 激活时无需询问即可使用的工具（空格或逗号分隔） |
+| `disallowed-tools` | 否 | skill 激活时禁用的工具 |
+| `arguments` | 否 | 命名位置参数，用于内容里的 `$name` 替换 |
+| `argument-hint` | 否 | 自动补全时提示期望的参数，如 `[filename] [format]` |
+| `model` | 否 | skill 激活时使用的模型 |
+| `context` | 否 | 设为 `fork` 时在子 agent 中执行 |
+
+> ⚠️ 没有 `invocation` 和 `autoInvoke` 字段——要"禁止自动触发"请用 `disable-model-invocation: true`。
+
+**参数替换**（在 SKILL.md 正文中可用）：
+
+| 占位符 | 说明 |
+|--------|------|
+| `$ARGUMENTS` | 调用时传入的全部参数（原样字符串） |
+| `$ARGUMENTS[N]` / `$N` | 按 0 起始的位置取参数，如 `$0` 是第一个 |
+| `$name` | 需先在 frontmatter 的 `arguments` 列表声明，按顺序映射位置 |
+
+> 没有 `$FILE` 这类内置变量。要接收文件路径，用 `$0`，或在 `arguments: [file]` 声明后用 `$file`。
 
 ### 2.3 常用技能推荐
 
@@ -262,10 +281,14 @@ Hooks 在特定事件触发时自动执行任务。
 
 **文件**：`.claude/commands/deploy.md`
 
+> 说明：`.claude/commands/` 与 `.claude/skills/` 现已合并——两者都能创建 `/deploy` 命令。旧的 commands 文件继续可用，但官方推荐用 skills（支持目录、附属文件、自动加载等）。部署这类手动触发的操作应加 `disable-model-invocation: true`，避免 Claude 自动执行。
+
 ```markdown
 ---
 name: deploy
 description: 部署应用到指定环境
+disable-model-invocation: true
+argument-hint: [dev|staging|prod]
 ---
 
 # Deploy Command
@@ -572,8 +595,10 @@ Claude 会自动创建记忆文件。
 
 ## 十、参考资源
 
-- [Claude Code 官方文档](https://docs.claude.ai/code)
-- [CLAUDE.md 规范](https://claudemd.dev)
+- [Claude Code 官方文档](https://code.claude.com/docs)
+- [Skills 官方文档](https://code.claude.com/docs/en/skills)（frontmatter 字段、参数替换的权威来源）
 - [MCP 协议文档](https://modelcontextprotocol.io)
-- [Agent Skills 标准](https://agentskills.io)
-- [Claude 插件市场](https://claude.ai/plugins)
+- [Agent Skills 开放标准](https://agentskills.io)
+- [Go Code Review Comments](https://go.dev/wiki/CodeReviewComments)（Go 代码审查官方规范）
+- [Uber Go Style Guide](https://github.com/uber-go/guide/blob/master/style.md)
+- [golangci-lint Linters](https://golangci-lint.run/docs/linters/)
