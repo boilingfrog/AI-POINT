@@ -8,6 +8,14 @@
 
 > 安全提示：插件 / MCP 会以你的权限执行代码或访问数据，**只安装可信来源**的扩展。
 
+## 本项目文档
+
+| 文档 | 内容 |
+|------|------|
+| [README.md](README.md) | 本文。Claude Code 扩展体系清单（插件 / MCP / 内置扩展 / IDE / 技能命令）+ 推荐配置 |
+| [claude-coding-agent.md](claude-coding-agent.md) | Claude 项目配置完整方案：核心配置文件、Skills、Hooks、自定义命令、Memory、语言特定配置、团队协作（含本项目说明） |
+| [OpenSpec.md](OpenSpec.md) | OpenSpec 规格驱动开发指南：为什么用、最大作用、完整工作流、文件提交策略 |
+
 ---
 
 ## 一、插件市场（Plugins）
