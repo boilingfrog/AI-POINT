@@ -93,6 +93,8 @@ Anthropic 为什么要加这个？很难确定，但我们可以推测一下。�
 
 我们对 Claude Code 框架的分析表明，Claude Code 的系统提示包含约 50 条独立指令。根据你使用的模型，这已经是你的 agent 能可靠遵循的指令的近三分之一——而这还是在规则、插件、技能或用户消息之前。
 
+<img src="/img/coding/instructionfollowing.png"  alt="claude" align="center" />
+
 这意味着你的 CLAUDE.md 文件应该包含尽可能少的指令——理想情况下只包含普遍适用于你任务的指令。
 
 ### CLAUDE.md 文件长度和适用性
