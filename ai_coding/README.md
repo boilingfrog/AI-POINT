@@ -14,6 +14,8 @@
 |------|------|
 | [README.md](README.md) | 本文。Claude Code 扩展体系清单（插件 / MCP / 内置扩展 / IDE / 技能命令）+ 推荐配置 |
 | [claude-coding-agent.md](claude-coding-agent.md) | Claude 项目配置完整方案：核心配置文件、Skills、Hooks、自定义命令、Memory、语言特定配置、团队协作（含本项目说明） |
+| [writing-good-claude-md.md](writing-good-claude-md.md) | 如何写好 CLAUDE.md：核心原则、必写内容、渐进式披露、避坑指南、模板 |
+| [llm-coding-rules.md](llm-coding-rules.md) | LLM 编码规则：先读后写、简洁、精准修改、验证、调试、依赖、常见失败模式（可作为项目 CLAUDE.md 的纪律来源） |
 | [OpenSpec.md](OpenSpec.md) | OpenSpec 规格驱动开发指南：为什么用、最大作用、完整工作流、文件提交策略 |
 
 ---

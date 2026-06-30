@@ -1,4 +1,4 @@
-# CLAUDE.md
+# LLM 编码规则
 
 这个文件存在的原因是：LLM 在写代码时会犯一些可以预见的错误。不是随机的错误，而是一遍又一遍重复出现的同类错误。我见过太多次了，所以把它们记录下来。
 
@@ -22,9 +22,6 @@ LLM 代码质量差的最大根源，不是不会写代码，而是在写新代�
 如果你不确定这个项目里某件事是怎么做的，就说出来。"我在代码库里没看到 X 的处理方式，应该参考 Y 的方式还是用别的方法？"永远优于猜测。
 
 ---
-<thinking>
-Let me continue with the translation of sections 2 through 10.
-</thinking>
 
 ## 2. 先思考再编码
 
@@ -76,9 +73,6 @@ async def send_welcome_email(user):
 简洁性的检验标准：把你的代码给一个不熟悉这个项目的人看。如果他们要问"为什么要这样抽象？"而你的回答是"以防我们以后需要……"，那你就过度设计了。"以防以后需要"不是需求，那是对未来的猜测，而对未来的猜测通常是错的。
 
 ---
-<thinking>
-Let me continue with sections 4-6.
-</thinking>
 
 ## 4. 精准修改
 
@@ -137,9 +131,6 @@ Let me continue with sections 4-6.
 这样做有两个好处：让用户在你浪费时间实现之前就能发现你方案中的错误，同时也强迫你真正想清楚步骤，而不是一头扎进去走一步算一步。
 
 ---
-<thinking>
-Let me continue with sections 7-10and the conclusion.
-</thinking>
 
 ## 7. 调试
 
