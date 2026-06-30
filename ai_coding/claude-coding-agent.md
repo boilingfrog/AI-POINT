@@ -95,25 +95,46 @@ docs/         # 文档
 
 **作用**：项目级别的 Claude 行为配置
 
+> ⚠️ settings.json 是**扁平结构**，字段名以[官方文档](https://code.claude.com/docs/en/settings)为准。不存在 `gitCommitStyle`、`preferredLanguage`、`codeStyle`、`testing`、`security` 这类字段——别凭直觉编。
+
 ```json
 {
-  "gitCommitStyle": "conventional",
-  "preferredLanguage": "zh-CN",
-  "codeStyle": {
-    "indentation": "spaces",
-    "indentSize": 4,
-    "lineLength": 120
+  "model": "claude-sonnet-4-5",
+  "language": "zh-CN",
+  "outputStyle": "default",
+  "env": {
+    "SOME_VAR": "value"
   },
-  "testing": {
-    "framework": "pytest",
-    "runBeforeCommit": true
+  "permissions": {
+    "allow": ["Bash(go test:*)", "Bash(golangci-lint run:*)"],
+    "ask": ["Bash(git push:*)"],
+    "deny": ["Read(./.env)", "Read(./secrets/**)"]
   },
-  "security": {
-    "scanOnSave": true,
-    "blockSecretsCommit": true
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "gofmt -w \"$CLAUDE_FILE_PATHS\"" }
+        ]
+      }
+    ]
   }
 }
 ```
+
+**常用字段**（节选，完整见官方文档）：
+
+| 字段 | 作用 |
+|------|------|
+| `model` | 覆盖默认模型 |
+| `language` | 回答语言（不是 `preferredLanguage`） |
+| `outputStyle` | 输出风格 |
+| `env` | 注入所有会话的环境变量 |
+| `permissions` | 工具权限的 `allow` / `ask` / `deny` 规则 |
+| `hooks` | 生命周期事件处理（见第三节） |
+
+> 代码风格（缩进、行宽、命名）这类约定写进 `CLAUDE.md`，不是 settings.json 的字段。
 
 ### 1.3 .mcp.json - MCP 服务配置（项目共享）
 
@@ -127,17 +148,17 @@ docs/         # 文档
 {
   "mcpServers": {
     "github": {
-      "transport": "http",
-      "url": "https://api.github.com/mcp/",
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
       "headers": {
         "Authorization": "Bearer ${GITHUB_TOKEN}"
       }
     },
     "context7": {
-      "transport": "http",
-      "url": "https://api.context7.com/mcp/",
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "Authorization": "Bearer ${CONTEXT7_TOKEN}"
+        "CONTEXT7_API_KEY": "${CONTEXT7_TOKEN}"
       }
     }
   }
@@ -145,7 +166,7 @@ docs/         # 文档
 ```
 
 **配置说明**：
-- 实际 MCP 服务 URL 请查阅官方文档或使用 `claude mcp add` 命令自动配置
+- 字段名是 `type`（`http` / `stdio` / `sse`），不是 `transport`
 - 推荐使用 `claude mcp add` 命令添加 MCP 服务，而不是手动编辑此文件
 - 可以使用 `claude mcp list` 查看已配置的 MCP 服务
 
@@ -247,56 +268,60 @@ argument-hint: [file-or-dir]
 
 ## 三、Hooks 自动化
 
-Hooks 在特定事件触发时自动执行任务。
+Hooks 在特定生命周期事件触发时自动执行 shell 命令。与靠 Claude「自觉遵守」的 CLAUDE.md 不同，hooks 由客户端强制执行。
 
 ### 3.1 配置 Hooks
 
-**位置**：`.claude/hooks.json`（在项目的 `.claude` 目录下）
+**位置**：`.claude/settings.json` 的 `hooks` 键下（**没有**独立的 `hooks.json` 文件）
 
-**作用**：定义在特定事件（保存、提交、推送等）时自动执行的任务
+**作用**：在特定事件触发时自动执行命令，比如改完文件跑格式化、跑 lint
 
 ```json
 {
-  "beforeFileSave": [
-    {
-      "name": "format",
-      "command": "gofmt -w ${FILE}",
-      "description": "格式化 Go 代码"
-    }
-  ],
-  "beforeCommit": [
-    {
-      "name": "lint",
-      "command": "make lint",
-      "description": "运行代码检查",
-      "abortOnFailure": true
-    },
-    {
-      "name": "test",
-      "command": "make test-quick",
-      "description": "运行快速测试",
-      "abortOnFailure": true
-    }
-  ],
-  "afterCommit": [
-    {
-      "name": "notify",
-      "command": "echo '提交成功: ${COMMIT_HASH}'",
-      "description": "提交成功通知"
-    }
-  ]
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "gofmt -w \"$CLAUDE_FILE_PATHS\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "make lint"
+          }
+        ]
+      }
+    ]
+  }
 }
 ```
 
-### 3.2 可用事件
+**结构说明**：
+- 顶层 key 是**事件名**（如 `PostToolUse`），值是数组
+- 每个元素有 `matcher`（匹配工具名，如 `Edit|Write|Bash`）和 `hooks` 列表
+- 每个 hook 是 `{ "type": "command", "command": "..." }`
+- 命令通过 stdin 收到 JSON 格式的事件数据；常用环境变量如 `$CLAUDE_PROJECT_DIR`、`$CLAUDE_FILE_PATHS`
 
-| 事件 | 触发时机 | 可用变量 |
-|------|----------|----------|
-| `beforeFileSave` | 文件保存前 | `${FILE}` |
-| `afterFileSave` | 文件保存后 | `${FILE}` |
-| `beforeCommit` | Git 提交前 | `${FILES}` |
-| `afterCommit` | Git 提交后 | `${COMMIT_HASH}` |
-| `beforePush` | Git 推送前 | `${BRANCH}` |
+### 3.2 常用事件
+
+| 事件 | 触发时机 | 说明 |
+|------|----------|------|
+| `PreToolUse` | 工具调用前 | 可用 `matcher` 匹配工具；返回非 0 可阻断 |
+| `PostToolUse` | 工具调用成功后 | 改文件后跑格式化/lint 用这个（`matcher: "Edit\|Write"`） |
+| `UserPromptSubmit` | 用户提交提示词时 | 可注入额外上下文 |
+| `SessionStart` | 会话开始/恢复 | 加载初始上下文 |
+| `Stop` | Claude 完成一轮回复时 | 收尾检查（如跑测试） |
+| `PreCompact` | 上下文压缩前 | — |
+
+> ⚠️ **不存在** `beforeFileSave`、`afterFileSave`、`beforeCommit`、`afterCommit`、`beforePush` 这些事件，也没有 `${FILE}`、`${COMMIT_HASH}`、`${BRANCH}` 这类变量。要在「改文件后」做事，用 `PostToolUse` + `matcher`；要在「提交前」强制做事，git 没有内置 hook 事件，应改用 git 自身的 `pre-commit` 钩子。完整事件列表见[官方文档](https://code.claude.com/docs/en/hooks)。
 
 ---
 
@@ -384,21 +409,38 @@ make deploy ENV=$ENV
 
 ## 五、Memory - 持久化记忆
 
-Memory 让 Claude 记住项目特定的上下文和偏好。
+Memory 让 Claude 跨会话记住项目特定的上下文和偏好。Claude Code 有两套记忆机制：
 
-### 5.1 手动创建记忆
+- **CLAUDE.md**：你手写的指令（见第一节），每次会话全量加载
+- **自动记忆（Auto memory）**：Claude 根据你的纠正和偏好自己记下来的笔记
 
-**位置**：`.claude/memory/`
+### 5.1 自动记忆的存储位置
 
-**文件格式**：Markdown with Frontmatter
+**位置**：`~/.claude/projects/<project>/memory/`（**不在**项目的 `.claude/memory/`）
 
-**示例**：`.claude/memory/api-versioning.md`
+`<project>` 由 git 仓库推导，同一仓库的所有 worktree / 子目录共享一份。目录结构：
+
+```
+~/.claude/projects/<project>/memory/
+├── MEMORY.md          # 简洁索引，每次会话加载前 200 行 / 25KB
+├── debugging.md       # 调试笔记等话题文件（按需加载）
+└── api-conventions.md
+```
+
+- 自动记忆默认开启，可在 `/memory` 里切换，或在 settings.json 设 `"autoMemoryEnabled": false`
+- 要换存储位置，设 `autoMemoryDirectory`（绝对路径或 `~/` 开头）
+- 自动记忆是**机器本地**的，不随 git 共享，也不跨机器同步
+
+### 5.2 记忆文件的格式
+
+话题文件是普通 Markdown，frontmatter 形如：
 
 ```markdown
 ---
 name: api-versioning
 description: API 版本管理策略
-type: project
+metadata:
+  type: project
 ---
 
 # API 版本管理
@@ -419,14 +461,16 @@ type: project
 **How to apply：** 添加新 API 时，先检查是否可以向后兼容地扩展现有版本
 ```
 
-### 5.2 通过对话创建记忆
+写完话题文件后，在 `MEMORY.md` 里加一行指针即可。
+
+### 5.3 通过对话创建记忆
 
 在对话中说：
 ```
 请记住：我们的日志格式使用结构化 JSON，字段包含 timestamp, level, message, context
 ```
 
-Claude 会自动创建记忆文件。
+Claude 会把它存进自动记忆。也可以说「加到 CLAUDE.md」让它写进项目说明文件。用 `/memory` 可浏览和编辑所有记忆文件。
 
 ---
 
@@ -441,14 +485,14 @@ Claude 会自动创建记忆文件。
 
 ### 推荐配置（优先级中）
 
-- [ ] `.claude/hooks.json` - 自动化 lint 和 test
+- [ ] `.claude/settings.json` 配置 `hooks` 键 - 自动化格式化 / lint
 - [ ] `.claude/skills/` - 常用技能（code-review、add-tests）
 - [ ] `.claude/commands/` - 项目特定命令（deploy、db-migrate）
 - [ ] `.mcp.json` - 团队共享的 MCP 配置
 
 ### 进阶配置（优先级低）
 
-- [ ] `.claude/memory/` - 项目特定知识
+- [ ] `.claude/rules/` - 按路径作用域拆分的项目规则
 - [ ] `.claude/agents/` - 子 Agent 配置
 - [ ] `.claude/output-styles/` - 自定义输出格式
 - [ ] LSP 插件配置（如 `gopls`、`pyright`）
@@ -530,16 +574,17 @@ Claude 会自动创建记忆文件。
 
 **应该提交**：
 - `CLAUDE.md`
-- `.claude/settings.json`
+- `.claude/settings.json`（含 `hooks` 配置）
 - `.claude/skills/`
 - `.claude/commands/`
-- `.claude/hooks.json`
+- `.claude/rules/`
 - `.mcp.json`（移除敏感 token，使用环境变量）
 
 **不应该提交**：
 - `.claude/settings.local.json` - 个人配置
-- `.claude/memory/` - 个人记忆（可选）
 - `.claude/.cache/` - 缓存文件
+
+> 自动记忆存在 `~/.claude/projects/<project>/memory/`（机器本地，不在项目目录内），本来就不进 git，无需在 `.gitignore` 里处理。
 
 ### 8.2 .gitignore 规则
 
@@ -547,7 +592,6 @@ Claude 会自动创建记忆文件。
 # Claude 本地配置和缓存
 .claude/settings.local.json
 .claude/.cache/
-.claude/memory/  # 如果不想共享个人记忆
 ```
 
 ### 8.3 团队 README
