@@ -619,7 +619,89 @@ Claude 会把它存进自动记忆。也可以说「加到 CLAUDE.md」让它写
 
 ---
 
-## 九、常见问题
+## 九、多 agent 工作流与子代理
+
+单个 agent 够用就别上多 agent。只有当改动要一次铺开很多处（跨服务统一替换、
+批量补测试/埋点），或想让「开发—审查—合并」各司其职时，才考虑拆给多个 agent。
+
+先分清三种「角色载体」——它们在 Claude Code 里是不同的东西，别混：
+
+| 载体 | 位置 | 是什么 | 怎么触发 |
+|------|------|--------|----------|
+| **子代理 agent** | `.claude/agents/*.md` | 内置特性：带独立 system prompt 的任务型代理 | 主代理按需委派，或你点名 |
+| **persona（约定，非内置）** | 任意 `.md`（如 `.claude/docs/agent-*.md`） | 一份「工作流人格」文档，规定某类活怎么干 | 在 plan/提示里指明「采用某 persona」 |
+| **skill / 命令** | `.claude/skills/`、`.claude/commands/` | 可复用的技能 / 命令 | 你手动敲 `/xxx` |
+
+> ⚠️ **persona 不是 Claude Code 的内置概念**，只是「把一类工作的流程写成文档、让
+> agent 采用」的约定用法。子代理才是内置特性。别把 persona 塞进 `.claude/agents/`
+> 当子代理用——除非它真要作为独立委派单元。
+
+### 9.1 子代理（内置）
+
+放在 `.claude/agents/<name>.md`，frontmatter 三个字段：
+
+```markdown
+---
+name: api-doc-updater
+description: 接口有改动后同步 api/ 文档源并重生成产物。改完接口忘了同步时主动使用。
+tools: Read, Grep, Glob, Edit, Bash   # 可选；省略则继承主代理全部工具
+---
+
+（正文即该子代理的 system prompt：职责、步骤、红线）
+```
+
+要点：
+- **description 写清「何时用」**：主代理靠它判断要不要委派，写成触发条件，别只写功能
+- **tools 给最小集**：只读型代理别给 `Edit`/`Bash`
+- 子代理有**独立上下文**，适合「脏活隔离」（大范围搜索、生成物重建），产出汇报回主代理
+
+### 9.2 persona 工作流：把一条流水线拆成角色
+
+大改动想让职责分明时，为每类活写一份 persona 文档，各自规定流程，再由并行的
+worker 分别采用。典型是「开发—审查—合并」三段：
+
+```
+developer（N worker，各自 worktree，持续小步提交）
+      │
+      ▼
+code-reviewer  ── merger 合并前评审闸门
+      │            REJECT/NEEDS_WORK → 退回 developer；APPROVE → 才合
+      ▼
+merger（评审 → git merge → lint+build+test → 循环）
+```
+
+三个要点，是这套能跑顺的关键：
+
+1. **评审要「串进链路」，别悬空**：光写一份 reviewer persona 没用——必须在 merger
+   的「合并前」显式插一步调它（`/code-review <diff>` 或采用 reviewer persona），
+   否则 review 永远不会发生。
+2. **规则要强制前置**：persona 开头用 `> 见 coding-rules.md` 这种软引用，agent 常
+   常不读。把「先读规则」提成每个 persona 的**显式第一步**，比软引用可靠得多。
+3. **高风险改动叠人审**：评审闸门是自动兜底，不替代人审；资金/权限等高风险域，
+   闸门过了也要人确认再合。
+
+### 9.3 hook 能把 agent 串起来吗？
+
+能，但有边界，别用错：
+
+- `SubagentStop` 事件在**子代理结束时**触发，可用来在**同一会话内**接力（如某子代理
+  跑完自动触发一次检查）。
+- 但如果 worker 是**各自独立进程**（tmux + worktree 多开 `claude`），它们不在同一会话
+  里，而 `Stop`/`SubagentStop` 按进程/会话触发，**串不起跨会话的多个 worker**。这种
+  编排该由**外部脚本**（启动/盯梢/合并）来做，不是 settings.json 的 hook。
+
+一句话：**同一会话内的子代理接力用 `SubagentStop`；跨会话多进程编排用外部脚本 +
+persona 约定。**
+
+### 9.4 什么时候别上多 agent
+
+- 各并行单元**文件不相交**才安全，否则合并冲突；大仓按「一个服务/一个包」切最稳
+- 涉及资金/权限/数据一致性等**需逐行把关**的改动，串行 + 人审，别并行
+- 单元改完**必须自验证**（build + test）再交给 merger 合
+
+---
+
+## 十、常见问题
 
 ### Q1：CLAUDE.md 和 README.md 有什么区别？
 
@@ -672,7 +754,7 @@ Claude 会把它存进自动记忆。也可以说「加到 CLAUDE.md」让它写
 
 ---
 
-## 十、参考资源
+## 十一、参考资源
 
 - [Claude Code 官方文档](https://code.claude.com/docs)
 - [Skills 官方文档](https://code.claude.com/docs/en/skills)（frontmatter 字段、参数替换的权威来源）
