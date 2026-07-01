@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for f in $CLAUDE_FILE_PATHS; do case \"$f\" in *.go) gofmt -w \"$f\";; esac; done 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "out=$(gofmt -l .); if [ -n \"$out\" ]; then echo \"gofmt 未通过: $out\" >&2; exit 2; fi; go vet ./... 1>&2 || exit 2"
+          }
+        ]
+      }
+    ]
+  }
+}
