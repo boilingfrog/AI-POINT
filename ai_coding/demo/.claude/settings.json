@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && gofmt -w . 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(git commit*)",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && out=$(gofmt -l .); if [ -n \"$out\" ]; then echo \"gofmt 未通过: $out\" >&2; exit 2; fi; go vet ./... 1>&2 || exit 2"
+          }
+        ]
+      }
+    ]
+  }
+}

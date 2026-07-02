@@ -115,7 +115,7 @@ docs/         # 文档
       {
         "matcher": "Edit|Write",
         "hooks": [
-          { "type": "command", "command": "gofmt -w \"$CLAUDE_FILE_PATHS\"" }
+          { "type": "command", "command": "gofmt -w ." }
         ]
       }
     ]
@@ -285,7 +285,7 @@ Hooks 在特定生命周期事件触发时自动执行 shell 命令。与靠 Cla
         "hooks": [
           {
             "type": "command",
-            "command": "gofmt -w \"$CLAUDE_FILE_PATHS\""
+            "command": "gofmt -w ."
           }
         ]
       }
@@ -306,22 +306,26 @@ Hooks 在特定生命周期事件触发时自动执行 shell 命令。与靠 Cla
 
 **结构说明**：
 - 顶层 key 是**事件名**（如 `PostToolUse`），值是数组
-- 每个元素有 `matcher`（匹配工具名，如 `Edit|Write|Bash`）和 `hooks` 列表
-- 每个 hook 是 `{ "type": "command", "command": "..." }`
-- 命令通过 stdin 收到 JSON 格式的事件数据；常用环境变量如 `$CLAUDE_PROJECT_DIR`、`$CLAUDE_FILE_PATHS`
+- 每个元素有 `matcher` 和 `hooks` 列表
+- `matcher` 只匹配**工具名**（如 `Bash`、`Edit|Write`）。要按命令模式过滤（如只在 `git commit`
+  时跑），用 hook 上的 `if` 字段（权限规则语法，如 `"if": "Bash(git commit*)"`），**别写进 `matcher`**
+- 每个 hook 是 `{ "type": "command", "command": "..." }`（可选 `if`）
+- 命令通过 **stdin 收到 JSON 事件数据**（含 `tool_name`、`tool_input`——要改哪个文件从
+  `tool_input.file_path` 取，bash 命令从 `tool_input.command` 取）；环境变量只有
+  `$CLAUDE_PROJECT_DIR` 等少数几个，**没有 `$CLAUDE_FILE_PATHS`**（官方文档未记载，别用）
 
 ### 3.2 常用事件
 
 | 事件 | 触发时机 | 说明 |
 |------|----------|------|
-| `PreToolUse` | 工具调用前 | 可用 `matcher` 匹配工具；返回非 0 可阻断 |
+| `PreToolUse` | 工具调用前 | `matcher` 匹配工具名 + 可选 `if` 过滤命令；`exit 2` 阻断（stderr 反馈给 Claude） |
 | `PostToolUse` | 工具调用成功后 | 改文件后跑格式化/lint 用这个（`matcher: "Edit\|Write"`） |
 | `UserPromptSubmit` | 用户提交提示词时 | 可注入额外上下文 |
 | `SessionStart` | 会话开始/恢复 | 加载初始上下文 |
 | `Stop` | Claude 完成一轮回复时 | 收尾检查（如跑测试） |
 | `PreCompact` | 上下文压缩前 | — |
 
-> ⚠️ **不存在** `beforeFileSave`、`afterFileSave`、`beforeCommit`、`afterCommit`、`beforePush` 这些事件，也没有 `${FILE}`、`${COMMIT_HASH}`、`${BRANCH}` 这类变量。要在「改文件后」做事，用 `PostToolUse` + `matcher`；要在「提交前」强制做事，git 没有内置 hook 事件，应改用 git 自身的 `pre-commit` 钩子。完整事件列表见[官方文档](https://code.claude.com/docs/en/hooks)。
+> ⚠️ **不存在** `beforeFileSave`、`afterFileSave`、`beforeCommit`、`afterCommit`、`beforePush` 这些事件，也没有 `${FILE}`、`${COMMIT_HASH}`、`${BRANCH}` 这类变量。要在「改文件后」做事，用 `PostToolUse` + `matcher`；要在「提交前」拦截，用 `PreToolUse` + `matcher: "Bash"` + `"if": "Bash(git commit*)"`（命令里 `exit 2` 阻断提交），或用 git 自身的 `pre-commit` 钩子。完整事件列表见[官方文档](https://code.claude.com/docs/en/hooks)。
 
 ---
 
