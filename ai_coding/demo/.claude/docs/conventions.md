@@ -3,7 +3,7 @@
 ## 命名
 
 - 包名小写、单数、无下划线（`service`、`dao`、`httpapi`）
-- 文件名 snake_case（`wallet_test.go`）
+- 文件名全小写；多词直接连写或用下划线均可，测试文件以 `_test.go` 结尾
 - 导出标识符驼峰（`NewHandler`）；缩写全大写或全小写（`ID` / `id`、`HTTP`、`JSON`、`URL`）
 - 常量按语义命名，避免魔法数字
 
