@@ -1,9 +1,5 @@
 # 如何写一个 Agent
 
-> 本文从概念到实践，系统地介绍如何设计并实现一个 AI Agent。
-
----
-
 ## 一、什么是 Agent？
 
 Agent（智能体）是一个能够**感知环境、做出决策、并执行行动**以达成目标的程序。
@@ -598,9 +594,10 @@ if __name__ == "__main__":
 
 ## 十、延伸阅读
 
-- [Anthropic Agent 官方文档](https://docs.anthropic.com/en/docs/agents)
-- [Building Effective Agents（Anthropic 博客）](https://www.anthropic.com/research/building-effective-agents)
-- [ReAct 论文](https://arxiv.org/abs/2210.03629)：Reason + Act 原始论文
-- [LangGraph 文档](https://langchain-ai.github.io/langgraph/)：复杂 Agent 编排框架
+【Anthropic Agent 官方文档】(https://docs.anthropic.com/en/docs/agents)
+【Building Effective Agents（Anthropic 博客）】(https://www.anthropic.com/research/building-effective-agents)
+【ReAct 论文】(https://arxiv.org/abs/2210.03629)：Reason + Act 原始论文
+【LangGraph 文档】(https://langchain-ai.github.io/langgraph/)：复杂 Agent 编排框架
+【什么是 AI 智能体】https://cloud.google.com/discover/what-are-ai-agents?hl=zh-CN  
 
 ---
